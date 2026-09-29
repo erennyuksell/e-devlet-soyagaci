@@ -175,6 +175,11 @@
     .lists{list-style:none;margin:0 0 16px;padding:0;border:1px solid #e6eaef;border-radius:12px}
     .lists li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;border-top:1px solid #eef1f4;font-size:14px}
     .lists li:first-child{border-top:0} .lists small{color:${C.muted}}
+    .lists li.cur{background:#f6fbf9}
+    .li-main{min-width:0} .li-tags{margin-top:4px} .li-tags .tag{margin:0 4px 0 0}
+    .li-acts{display:flex;align-items:center;gap:14px;flex:none}
+    .li-acts .linkbtn{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+    .notice.info{background:#eef5ff;border-color:#bcd3f5;color:#1d3f73}
     @media (max-width:1180px){.bar .lbl{display:none}.tb{padding:0 9px}}
     @media (max-width:860px){.subtitle{display:none}.search input{width:150px}.legend{display:none}}
   `;
@@ -603,6 +608,7 @@
     const st = { x: 0, y: 0, k: 1 };
     let graph = null, focusId = null, model = null, sc = null, selected = null, matches = [], matchIdx = -1, anim = 0;
     let horizontal = null; // null: ilk çizimde ekrana göre seçilir
+    let view = { all: [], only: null }; // bütün saklı listeler ve varsa tek başına gösterilen liste
     let edgesOf = new Map(); // kart id -> ona bağlı çizgiler (üstüne gelince vurgulamak için)
     const dismissed = new Set(); // kullanıcının kapattığı uyarılar (sekme açık kaldıkça)
 
@@ -647,8 +653,8 @@
       animateTo(visibleW / 2 - n.x * kk, r.height / 2 - n.y * kk, kk);
     }
 
-    const importName = (id) => { const i = graph.imports.find((x) => x.id === id); return i ? tc(i.ownerName) : ''; };
-    const ownerFirst = () => graph.imports.length && graph.find(`${graph.imports[0].id}|`);
+    const importName = (id) => { const i = view.all.find((x) => x.id === id); return i ? tc(i.ownerName) : ''; };
+    const ownerFirst = () => view.all.length && graph.find(`${view.all[0].id}|`);
 
     function layout(h) {
       const m = NS.layoutGraph(graph, focusId, { ghosts: $('.ghosts').checked, horizontal: h });
@@ -660,7 +666,7 @@
       const selPerson = keepSelection && selected ? selected.person.id : null;
       root.querySelectorAll('.empty').forEach((e) => e.remove());
       $('.notices').textContent = '';
-      $('.nlists').textContent = graph.imports.length ? `(${graph.imports.length})` : '';
+      $('.nlists').textContent = view.only ? `(1/${view.all.length})` : view.all.length ? `(${view.all.length})` : '';
       if (!graph.persons.size) {
         model = sc = null;
         vp.textContent = '';
@@ -692,17 +698,23 @@
         s.oldest ? `en eski doğum ${s.oldest}` : '',
       ].filter(Boolean).join(' · ');
       const notes = [];
+      if (view.only) {
+        const o = view.all.find((i) => i.id === view.only);
+        notes.push([`Yalnızca ${tc(o.ownerName)} listesi gösteriliyor.`, () => app.onShowOnly(null), 'Tüm listeleri göster', true]);
+      }
       if (model.families > 1) notes.push([`Ağaçta birbirine bağlanmayan ${model.families} ayrı aile var. Ortak bir akrabanın listesini eklediğinizde birleşirler.`, null]);
       if (graph.extra.length) notes.push([`${graph.extra.length} satır ağaca yerleştirilemedi.`, showExtra]);
-      for (const [text, fn] of notes) {
+      for (const [text, fn, label, sticky] of notes) {
         if (dismissed.has(text)) continue;
         const d = document.createElement('div');
-        d.className = 'notice';
-        d.innerHTML = `<span>${esc(text)}</span>` + (fn ? '<button type="button" class="go">Göster</button>' : '') +
-          `<button type="button" class="nx" title="Kapat" aria-label="Uyarıyı kapat">${ICON.close}</button>`;
+        d.className = 'notice' + (sticky ? ' info' : '');
+        d.innerHTML = `<span>${esc(text)}</span>` + (fn ? `<button type="button" class="go">${esc(label || 'Göster')}</button>` : '') +
+          (sticky ? '' : `<button type="button" class="nx" title="Kapat" aria-label="Uyarıyı kapat">${ICON.close}</button>`);
         if (fn) d.querySelector('.go').onclick = fn;
-        d.querySelector('.nx').onclick = () => { dismissed.add(text); d.remove(); };
-        d.querySelector('.nx svg').setAttribute('width', 14);
+        if (!sticky) {
+          d.querySelector('.nx').onclick = () => { dismissed.add(text); d.remove(); };
+          d.querySelector('.nx svg').setAttribute('width', 14);
+        }
         $('.notices').appendChild(d);
       }
       selected = null;
@@ -864,7 +876,7 @@
         if (!parsed || !parsed.people.length) { result.innerHTML = '<p class="note warn">Bu içerikte Alt-Üst Soy tablosu bulunamadı.</p>'; return; }
         const rec = NS.makeImport(parsed, source);
         const self = parsed.people.find((p) => p.path.length === 0);
-        const already = graph.imports.find((i) => i.ownerKey && i.ownerKey === rec.ownerKey);
+        const already = view.all.find((i) => i.ownerKey && i.ownerKey === rec.ownerKey);
         let warn = '';
         if (target) {
           const tid = NS.identity(target.p);
@@ -894,23 +906,35 @@
     }
 
     function openLists() {
-      const items = graph.imports.map((i) => {
-        const att = i.attachTo ? graph.find(i.attachTo) : null;
-        return `<li><div><b>${esc(tc(i.ownerName))}</b> <small>· ${i.people.length} kişi · ${esc(i.source || '')} · ${new Date(i.addedAt).toLocaleDateString('tr-TR')}</small>
-          ${att && att.owners.indexOf(i.id) < 0 ? '' : ''}</div><button class="linkbtn danger" data-del="${esc(i.id)}">Kaldır</button></li>`;
+      const items = view.all.map((i) => {
+        const owner = graph.find(`${i.id}|`);
+        const centered = owner && model && model.self.person.id === owner.id;
+        const alone = view.only === i.id;
+        const tags = (centered ? '<span class="tag alive">Merkezde</span>' : '') + (alone ? '<span class="tag m">Yalnız bu gösteriliyor</span>' : '');
+        return `<li class="${centered || alone ? 'cur' : ''}"><div class="li-main"><b>${esc(tc(i.ownerName))}</b> <small>· ${i.people.length} kişi · ${esc(i.source || '')} · ${new Date(i.addedAt).toLocaleDateString('tr-TR')}</small>
+          ${tags ? `<div class="li-tags">${tags}</div>` : ''}</div>
+          <div class="li-acts">
+            ${centered ? '' : `<button class="linkbtn" data-center="${esc(i.id)}" title="Ağacı bu listenin sahibine göre çiz">${ICON.target}Merkeze al</button>`}
+            ${alone ? `<button class="linkbtn" data-all="1" title="Bütün listeleri birleşik göster">Tüm listeler</button>`
+              : view.all.length > 1 ? `<button class="linkbtn" data-only="${esc(i.id)}" title="Ağaçta yalnızca bu listedeki kişileri göster">Yalnız bu liste</button>` : ''}
+            <button class="linkbtn danger" data-del="${esc(i.id)}">Kaldır</button>
+          </div></li>`;
       }).join('');
       openModal(`<h2>Eklenen listeler</h2>
         <p class="lead">Listeler yalnızca bu tarayıcıda saklanır. Başka bir bilgisayara taşımak ya da bir akrabanızla paylaşmak için yedek dosyası indirebilirsiniz.</p>
         <ul class="lists">${items || '<li>Henüz liste yok.</li>'}</ul>
         <div class="acts"><button class="ghostbtn backup">${ICON.down}Yedeği indir</button>
           <label class="ghostbtn">${ICON.plus}Yedekten yükle<input type="file" accept=".json" class="restore" hidden></label>
-          ${graph.imports.length ? '<button class="linkbtn danger wipe">Tümünü sil</button>' : ''}</div>`);
+          ${view.all.length ? '<button class="linkbtn danger wipe">Tümünü sil</button>' : ''}</div>`);
+      mbody.querySelectorAll('[data-center]').forEach((b) => (b.onclick = async () => { closeModal(); await app.onFocusList(b.dataset.center); }));
+      mbody.querySelectorAll('[data-only]').forEach((b) => (b.onclick = async () => { closeModal(); await app.onShowOnly(b.dataset.only); }));
+      mbody.querySelectorAll('[data-all]').forEach((b) => (b.onclick = async () => { closeModal(); await app.onShowOnly(null); }));
       mbody.querySelectorAll('[data-del]').forEach((b) => (b.onclick = async () => {
-        const i = graph.imports.find((x) => x.id === b.dataset.del);
+        const i = view.all.find((x) => x.id === b.dataset.del);
         if (confirm(`${tc(i.ownerName)} listesi ağaçtan kaldırılsın mı?`)) { await app.onRemove(i.id); openLists(); }
       }));
       mbody.querySelector('.backup').onclick = () => {
-        const blob = new Blob([JSON.stringify({ app: 'e-devlet-soy-agaci', version: 1, imports: graph.imports }, null, 1)], { type: 'application/json' });
+        const blob = new Blob([JSON.stringify({ app: 'e-devlet-soy-agaci', version: 1, imports: view.all }, null, 1)], { type: 'application/json' });
         download(blob, `soy-agaci-yedek-${new Date().toISOString().slice(0, 10)}.json`, root);
       };
       mbody.querySelector('.restore').onchange = async (e) => {
@@ -1101,9 +1125,10 @@
 
     return {
       // Yeni veriyle yeniden çizer. refit: görünümü ekrana sığdır.
-      update(g, fid, refit) {
+      update(g, fid, refit, v) {
         graph = g;
         focusId = fid;
+        view = v || { all: g.imports, only: null };
         build(!refit);
         if (refit || !model) fit(false);
       },
