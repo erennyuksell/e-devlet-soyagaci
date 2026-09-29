@@ -8,6 +8,9 @@
   const F_NAME = `600 13.5px ${FONT}`;
   const F_SUB = `12px ${FONT}`;
   const F_SMALL = `11px ${FONT}`;
+  const F_KIN = `600 10.5px ${FONT}`;
+  const F_BIG = `700 24px ${FONT}`;
+  const FAR_ZOOM = 0.5; // bu yakınlaştırmanın altında kartlarda yalnızca büyük isim gösterilir
   const LABEL_W = 250; // soldaki kuşak etiketleri için ayrılan alan
   const EDEVLET_URL = 'https://www.turkiye.gov.tr/nvi-alt-ust-soy-bilgisi-sorgulama';
 
@@ -31,6 +34,8 @@
     .inferred .card{fill:${C.ghostCard};stroke:${C.ghost};stroke-dasharray:5 4}
     .inferred .stripe{opacity:.45} .inferred .name{fill:#4e5966;font-style:italic}
     .badge{fill:#fff4d9;stroke:${C.twin};stroke-width:1.2} .badgetext{font:700 10.5px ${FONT};fill:${C.twin}}
+    .kin{font:${F_KIN};fill:#8a94a3}
+    .bigname{display:none;font:${F_BIG};fill:${C.text}} .inferred .bigname{fill:#4e5966;font-style:italic}
   `;
 
   const UI_CSS = `
@@ -38,7 +43,7 @@
     *{box-sizing:border-box}
     .ov{position:fixed;inset:0;z-index:2147483647;display:flex;flex-direction:column;font:14px/1.4 ${FONT};color:${C.text};
       background:#f7f8fa radial-gradient(circle,#d9dee6 1px,transparent 1.2px) 0 0/22px 22px;-webkit-font-smoothing:antialiased}
-    .bar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fff;border-bottom:1px solid #e3e7ec;box-shadow:0 1px 3px rgba(15,23,42,.05);flex-wrap:wrap}
+    .bar{display:flex;align-items:center;gap:8px;padding:9px 14px;background:#fff;border-bottom:1px solid #e3e7ec;box-shadow:0 1px 3px rgba(15,23,42,.05);position:relative;z-index:3}
     .brand{display:flex;align-items:center;gap:10px;margin-right:auto;min-width:0}
     .brand svg{flex:none}
     .title{font-weight:700;font-size:15px;white-space:nowrap}
@@ -49,10 +54,50 @@
     .btn:hover{background:#fff;box-shadow:0 1px 2px rgba(15,23,42,.1)}
     .btn.icon{width:30px;padding:0;justify-content:center}
     .btn:focus-visible,.search input:focus-visible,.switch input:focus-visible+span{outline:2px solid ${C.self};outline-offset:1px}
-    .zoomval{min-width:44px;text-align:center;font-size:12px;color:${C.muted};font-variant-numeric:tabular-nums}
+    .tb{height:34px;border:1px solid #e1e6ec;background:#fff;border-radius:9px;padding:0 11px}
+    .tb:hover{border-color:#c8d0da;box-shadow:none;background:#f8fafb}
+    .tb[aria-expanded=true]{background:#f1f3f6}
+    .tb .chev{opacity:.55;margin-left:-2px}
+    .menuwrap{position:relative}
+    .menu{position:absolute;top:calc(100% + 6px);right:0;min-width:270px;background:#fff;border:1px solid #e3e7ec;border-radius:12px;box-shadow:0 12px 32px rgba(15,23,42,.14);padding:8px;z-index:10}
+    .menu[hidden]{display:none}
+    .menu .mi{display:flex;width:100%;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;font-size:13.5px;text-align:left;color:#1f2937}
+    .menu .mi:hover{background:#f3f5f8}
+    .menu .mi small{display:block;color:${C.muted};font-size:11.5px;font-weight:400}
+    .menu .mh{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:${C.muted};padding:6px 10px 4px}
+    .menu .switch{padding:9px 10px;font-size:13.5px;white-space:nowrap}
+    .seg{display:flex;background:#f1f3f6;border-radius:9px;padding:3px;margin:2px 6px 6px}
+    .seg button{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;height:30px;border-radius:7px;font-size:13px;color:#4b5563}
+    .seg button.on{background:#fff;color:${C.text};box-shadow:0 1px 2px rgba(15,23,42,.12);font-weight:600}
+    .zoombox{position:absolute;right:14px;bottom:14px;display:flex;flex-direction:column;align-items:center;background:#fff;border:1px solid #e3e7ec;border-radius:12px;box-shadow:0 4px 14px rgba(15,23,42,.08);padding:4px;transition:right .22s ease}
+    .zoombox .btn{width:34px;height:32px;padding:0;justify-content:center}
+    .zoombox .sep{width:22px;height:1px;background:#e6eaef;margin:3px 0}
+    .panel.open ~ .zoombox,.panel.open ~ .helppop{right:374px}
+    .zoomval{font-size:11px;color:${C.muted};font-variant-numeric:tabular-nums;padding:2px 0}
+    .helppop{position:absolute;right:62px;bottom:14px;background:#fff;border:1px solid #e3e7ec;border-radius:12px;box-shadow:0 12px 32px rgba(15,23,42,.14);padding:12px 14px;font-size:12.5px;color:#374151;width:270px;transition:right .22s ease}
+    .helppop[hidden]{display:none}
+    .helppop b{display:block;font-size:13px;margin-bottom:6px;color:${C.text}}
+    .helppop div{display:flex;justify-content:space-between;gap:10px;padding:3px 0}
+    kbd{font:600 11px ${FONT};background:#f1f3f6;border:1px solid #e1e6ec;border-bottom-width:2px;border-radius:5px;padding:1px 6px;color:#374151;white-space:nowrap}
+    .results{position:absolute;top:calc(100% + 6px);left:0;width:320px;max-height:360px;overflow:auto;background:#fff;border:1px solid #e3e7ec;border-radius:12px;box-shadow:0 12px 32px rgba(15,23,42,.14);padding:6px;z-index:10}
+    .results[hidden]{display:none}
+    .results button{display:flex;width:100%;align-items:center;gap:10px;padding:7px 8px;border-radius:8px;text-align:left}
+    .results button:hover,.results button.on{background:#f3f5f8}
+    .results .nm{font-size:13.5px;font-weight:600;color:${C.text}}
+    .results small{display:block;font-size:11.5px;color:${C.muted}}
+    .results .none{padding:10px;font-size:13px;color:${C.muted}}
+    .av{flex:none;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;color:#fff;background:${C.none}}
+    .av.m{background:${C.male}} .av.f{background:${C.female}} .av.inf{background:#fff;color:#6b7683;border:1.5px dashed ${C.ghost}}
+    .phead{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px}
+    .phead .av{width:44px;height:44px;font-size:15px}
+    .phead .rel{margin-bottom:0}
+    .far .name,.far .l2,.far .l3,.far .kin,.far .gsub{display:none}
+    .far .bigname{display:block}
+    .far .glabel{font-size:26px}
+    .edge.hl{stroke:#6d7c8f;stroke-width:2.4}
     .search{position:relative;display:flex;align-items:center}
     .search svg{position:absolute;left:9px;color:${C.muted};pointer-events:none}
-    .search input{font:inherit;font-size:13px;height:34px;width:190px;padding:0 44px 0 30px;border:1px solid #dde2e8;border-radius:9px;background:#fff;color:${C.text};outline:none}
+    .search input{font:inherit;font-size:13px;height:34px;width:220px;padding:0 44px 0 30px;border:1px solid #dde2e8;border-radius:9px;background:#fff;color:${C.text};outline:none}
     .search input:focus{border-color:${C.self}}
     .search .count{position:absolute;right:9px;font-size:11.5px;color:${C.muted};font-variant-numeric:tabular-nums}
     .switch{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#374151;cursor:pointer;user-select:none;padding:0 4px}
@@ -75,10 +120,11 @@
     .node,.edge{transition:opacity .18s}
     .legend{position:absolute;left:14px;bottom:14px;display:flex;gap:14px;align-items:center;background:rgba(255,255,255,.92);border:1px solid #e3e7ec;border-radius:10px;padding:8px 12px;font-size:12px;color:#4b5563;box-shadow:0 2px 8px rgba(15,23,42,.06)}
     .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-2px}
-    .hint{position:absolute;right:14px;bottom:14px;font-size:11.5px;color:${C.muted};background:rgba(255,255,255,.85);padding:6px 10px;border-radius:8px}
     .notices{position:absolute;left:50%;top:12px;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
-    .notice{pointer-events:auto;background:#fff8e6;border:1px solid #f0d58a;color:#7a5a00;font-size:12.5px;padding:7px 12px;border-radius:9px;box-shadow:0 2px 8px rgba(15,23,42,.08)}
-    .notice button{text-decoration:underline;color:inherit;font-weight:600;margin-left:6px}
+    .notice{pointer-events:auto;display:flex;align-items:center;gap:8px;max-width:min(560px,calc(100vw - 40px));background:#fffaf0;border:1px solid #f0d58a;color:#6b4f00;font-size:12.5px;padding:6px 6px 6px 12px;border-radius:10px;box-shadow:0 2px 8px rgba(15,23,42,.08)}
+    .notice .go{text-decoration:underline;color:inherit;font-weight:600;white-space:nowrap}
+    .notice .nx{width:22px;height:22px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:#8a6d1a;flex:none}
+    .notice .nx:hover{background:#f7ecc9}
     .panel{position:absolute;top:0;right:0;bottom:0;width:360px;max-width:100%;background:#fff;border-left:1px solid #e3e7ec;box-shadow:-8px 0 24px rgba(15,23,42,.08);
       transform:translateX(100%);transition:transform .22s ease;overflow-y:auto;padding:20px 22px 28px}
     .panel.open{transform:none}
@@ -129,7 +175,8 @@
     .lists{list-style:none;margin:0 0 16px;padding:0;border:1px solid #e6eaef;border-radius:12px}
     .lists li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;border-top:1px solid #eef1f4;font-size:14px}
     .lists li:first-child{border-top:0} .lists small{color:${C.muted}}
-    @media (max-width:900px){.hint{display:none}.search input{width:140px}.subtitle{display:none}}
+    @media (max-width:1180px){.bar .lbl{display:none}.tb{padding:0 9px}}
+    @media (max-width:860px){.subtitle{display:none}.search input{width:150px}.legend{display:none}}
   `;
 
   const ICON = {
@@ -143,6 +190,9 @@
     horiz: '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="1.5" y="5.5" width="3.5" height="5" rx="1"/><rect x="11" y="1.5" width="3.5" height="5" rx="1"/><rect x="11" y="9.5" width="3.5" height="5" rx="1"/><path d="M5 8h3M11 4H8v8h3"/></svg>',
     list: '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5.5 4h8M5.5 8h8M5.5 12h8"/><circle cx="2.5" cy="4" r=".6" fill="currentColor"/><circle cx="2.5" cy="8" r=".6" fill="currentColor"/><circle cx="2.5" cy="12" r=".6" fill="currentColor"/></svg>',
     target: '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="5.5"/><circle cx="8" cy="8" r="2" fill="currentColor"/></svg>',
+    chev: '<svg class="chev" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5 6 7.5l3-3"/></svg>',
+    view: '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M8 2 14 5 8 8 2 5z"/><path d="M2 8l6 3 6-3M2 11l6 3 6-3"/></svg>',
+    help: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M6.3 6.3a1.8 1.8 0 1 1 2.4 1.7c-.5.2-.7.6-.7 1.1v.3"/><circle cx="8" cy="11.4" r=".5" fill="currentColor"/></svg>',
     search: '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5 14 14" stroke-linecap="round"/></svg>',
   };
 
@@ -208,6 +258,55 @@
     return { name: fullName(n) || 'Adı yok', l2, l3: placeParts(p) };
   }
 
+  const KIN_SHORT = {
+    'Babası': 'Baba', 'Annesi': 'Anne', 'Dedesi': 'Dede', 'Babaannesi': 'Babaanne', 'Anneannesi': 'Anneanne',
+    'Erkek kardeşi': 'Kardeş', 'Kız kardeşi': 'Kardeş', 'Kardeşi': 'Kardeş', 'Amcası': 'Amca', 'Halası': 'Hala',
+    'Dayısı': 'Dayı', 'Teyzesi': 'Teyze', 'Oğlu': 'Oğul', 'Kızı': 'Kız', 'Çocuğu': 'Çocuk', 'Torunu': 'Torun',
+    'Yeğeni': 'Yeğen', 'Kuzeni': 'Kuzen', 'Büyük dedesi': 'Büyük dede', 'Büyük ninesi': 'Büyük nine', 'Eşi': 'Eş',
+    'Kayınpederi': 'Kayınpeder', 'Kayınvalidesi': 'Kayınvalide', 'Gelini': 'Gelin', 'Damadı': 'Damat',
+  };
+  function cardKin(n) {
+    if (n.isFocus || n.compRoot || n.comp || !n.rel) return '';
+    const k = KIN_SHORT[NS.kinName(n.rel, n.gender)];
+    if (k) return k;
+    const r = n.rel.join('');
+    if (/^[FM]{3,}$/.test(r)) return r[0] === 'F' ? 'Baba tarafı' : 'Anne tarafı';
+    return '';
+  }
+  // "Kuzeni" -> "Kuzeninin", "Babası" -> "Babasının": Türkçe tamlayan eki (ünlü uyumuna göre).
+  function genitive(word) {
+    const v = (word.match(/[aeıioöuü](?=[^aeıioöuü]*$)/i) || ['i'])[0].toLocaleLowerCase('tr-TR');
+    const x = { a: 'ı', ı: 'ı', e: 'i', i: 'i', o: 'u', u: 'u', ö: 'ü', ü: 'ü' }[v];
+    return word + 'n' + x + 'n';
+  }
+  // Merkezden kişiye giden yolu bilinen akrabalık adlarıyla kısaltır:
+  // F,B,S,D,M,F,F -> "Kuzeninin eşinin dedesi". Her adımda tanınan en uzun parça seçilir.
+  function kinPhrase(n) {
+    const chain = [];
+    for (let c = n; c; c = c.parent) chain.unshift(c);
+    if (chain.length < 2) return 'Kendisi';
+    const words = [];
+    let i = 0;
+    while (i < chain.length - 1) {
+      let took = 0, word = '';
+      for (let j = chain.length - 1; j > i; j--) {
+        const seg = chain[j].rel.slice(chain[i].rel.length);
+        const k = NS.kinName(seg, chain[j].gender);
+        if (k && k !== 'Kendisi') { took = j; word = k; break; }
+      }
+      if (!took) { took = i + 1; word = NS.relText(chain[took].rel.slice(chain[i].rel.length)); }
+      words.push(word);
+      i = took;
+    }
+    return words.map((w, k) => {
+      const t = k === words.length - 1 ? w : genitive(w);
+      return k ? t.toLocaleLowerCase('tr-TR') : t;
+    }).join(' ');
+  }
+
+  const initials = (n) => (n.p.name || '?').split(/\s+/).concat(n.p.surname ? [n.p.surname] : []).filter(Boolean)
+    .map((w) => w[0].toLocaleUpperCase('tr-TR')).slice(0, 2).join('');
+
   function genTitle(g) {
     if (g === 0) return 'Merkez kuşağı';
     if (g === 1) return 'Anne-baba kuşağı';
@@ -266,10 +365,13 @@
     });
     const cards = model.nodes.map((n) => {
       const t = cardLines(n);
-      const max = L.W - 22 - 12 - (n.twins ? 22 : 0);
+      const kin = cardKin(n);
+      const right = 12 + (n.twins ? 22 : 0);
+      const kinW = kin ? textW(kin, F_KIN) + 8 : 0;
       return {
-        n, x: n.x - hw, y: n.y - hh,
-        name: fitText(t.name, F_NAME, max),
+        n, x: n.x - hw, y: n.y - hh, kin, kinX: L.W - right,
+        name: fitText(t.name, F_NAME, L.W - 22 - right - kinW),
+        big: fitText(t.name, F_BIG, L.W - 22 - right + (n.twins ? 0 : 0)),
         l2: fitText(t.l2, F_SUB, L.W - 34),
         l3: fitText(t.l3, F_SMALL, L.W - 34),
         full: t.name,
@@ -308,6 +410,8 @@
       el('text', { class: 'name', x: 22, y: 25 }, g).textContent = c.name;
       el('text', { class: 'l2', x: 22, y: 44 }, g).textContent = c.l2;
       el('text', { class: 'l3', x: 22, y: 59 }, g).textContent = c.l3;
+      el('text', { class: 'bigname', x: 22, y: L.H / 2 + 9 }, g).textContent = c.big;
+      if (c.kin) el('text', { class: 'kin', x: c.kinX, y: 24, 'text-anchor': 'end' }, g).textContent = c.kin;
       if (n.isFocus || n.compRoot) {
         const label = n.isFocus ? sc.chip : 'AYRI AİLE';
         const w = textW(label, `700 10.5px ${FONT}`) + 16;
@@ -371,6 +475,7 @@
       x.fillStyle = inf ? '#4e5966' : C.text; x.font = (inf ? 'italic ' : '') + F_NAME; x.fillText(c.name, 22, 25);
       x.fillStyle = C.sub; x.font = F_SUB; x.fillText(c.l2, 22, 44);
       x.fillStyle = C.muted; x.font = F_SMALL; x.fillText(c.l3, 22, 59);
+      if (c.kin) { x.fillStyle = '#8a94a3'; x.font = F_KIN; x.textAlign = 'right'; x.fillText(c.kin, c.kinX, 24); x.textAlign = 'left'; }
       if (n.isFocus || n.compRoot) {
         const label = n.isFocus ? sc.chip : 'AYRI AİLE';
         x.font = `700 10.5px ${FONT}`;
@@ -438,21 +543,24 @@
       <div class="ov">
         <div class="bar">
           <div class="brand">${ICON.tree}<div style="min-width:0"><div class="title">Soy Ağacı</div><div class="subtitle"></div></div></div>
-          <label class="search">${ICON.search}<input type="search" placeholder="Kişi ara" aria-label="Kişi ara"><span class="count"></span></label>
-          <label class="switch" title="Ağaçtaki en eski kişilerin anne ve babasını, onların kaydındaki Baba Adı ve Ana Adı alanlarından ekler"><input type="checkbox" class="ghosts"><span></span>Bir kuşak daha tahmin et</label>
-          <div class="grp"><button class="btn orient" title="Ağacın yönünü değiştir"></button></div>
-          <div class="grp">
-            <button class="btn icon zout" title="Uzaklaştır (-)">${ICON.minus}</button>
-            <span class="zoomval">100%</span>
-            <button class="btn icon zin" title="Yakınlaştır (+)">${ICON.plus}</button>
-            <button class="btn icon zfit" title="Ekrana sığdır (0)">${ICON.fit}</button>
+          <div class="search">${ICON.search}<input type="search" placeholder="Kişi ara" aria-label="Kişi ara" autocomplete="off"><span class="count"></span><div class="results" hidden></div></div>
+          <div class="menuwrap">
+            <button class="btn tb" data-menu="view" aria-expanded="false" title="Görünüm ayarları">${ICON.view}<span class="lbl">Görünüm</span>${ICON.chev}</button>
+            <div class="menu" data-for="view" hidden>
+              <div class="mh">Ağacın yönü</div>
+              <div class="seg"><button data-o="v">${ICON.vert}Dikey</button><button data-o="h">${ICON.horiz}Yatay</button></div>
+              <label class="switch" title="Ağaçtaki en eski kişilerin anne ve babasını, onların kaydındaki Baba Adı ve Ana Adı alanlarından ekler"><input type="checkbox" class="ghosts"><span></span>Bir kuşak daha tahmin et</label>
+            </div>
           </div>
-          <div class="grp">
-            <button class="btn png" title="Ağacı PNG resmi olarak indir">${ICON.down}PNG</button>
-            <button class="btn svg" title="Ağacı SVG (büyütülebilir çizim) olarak indir">${ICON.down}SVG</button>
+          <div class="menuwrap">
+            <button class="btn tb" data-menu="dl" aria-expanded="false" title="Ağacı indir">${ICON.down}<span class="lbl">İndir</span>${ICON.chev}</button>
+            <div class="menu" data-for="dl" hidden>
+              <button class="mi png">${ICON.down}<span>PNG resim<small>Paylaşmak ve yazdırmak için</small></span></button>
+              <button class="mi svg">${ICON.down}<span>SVG çizim<small>Kalite kaybı olmadan büyütülebilir</small></span></button>
+            </div>
           </div>
-          <div class="grp"><button class="btn lists" title="Eklenen listeler, yedekleme">${ICON.list}Listeler <span class="nlists"></span></button></div>
-          <button class="primary addlist" title="Başka bir kişinin soy listesini ekle">${ICON.plus}Liste ekle</button>
+          <button class="btn tb listsbtn" title="Eklenen listeler, yedekleme">${ICON.list}<span class="lbl">Listeler</span> <span class="nlists"></span></button>
+          <button class="primary addlist" title="Başka bir kişinin soy listesini ekle">${ICON.plus}<span class="lbl">Liste ekle</span></button>
         </div>
         <div class="stage">
           <svg class="tree" xmlns="${SVGNS}"><g class="vp"></g></svg>
@@ -462,9 +570,27 @@
             <span><i style="background:#fff;border:2px solid ${C.self}"></i>Merkezdeki kişi</span>
             <span><i style="background:${C.ghostCard};border:1.5px dashed ${C.ghost}"></i>Yalnızca adı biliniyor</span>
           </div>
-          <div class="hint">Sürükle: kaydır · Ctrl + tekerlek / iki parmak: yakınlaştır · Karta tıkla: ayrıntı</div>
           <div class="notices"></div>
           <aside class="panel" aria-live="polite"><button class="btn icon x" title="Kapat">${ICON.close}</button><div class="pbody"></div></aside>
+          <div class="zoombox">
+            <button class="btn zin" title="Yakınlaştır (+)">${ICON.plus}</button>
+            <span class="zoomval">100%</span>
+            <button class="btn zout" title="Uzaklaştır (-)">${ICON.minus}</button>
+            <span class="sep"></span>
+            <button class="btn zfit" title="Ekrana sığdır (0)">${ICON.fit}</button>
+            <button class="btn zfocus" title="Merkezdeki kişiye git (M)">${ICON.target}</button>
+            <span class="sep"></span>
+            <button class="btn zhelp" title="Kısayollar" aria-expanded="false">${ICON.help}</button>
+          </div>
+          <div class="helppop" hidden><b>Nasıl gezinilir</b>
+            <div><span>Kaydır</span><kbd>Sürükle</kbd></div>
+            <div><span>Yakınlaştır</span><kbd>Ctrl + tekerlek</kbd></div>
+            <div><span>Yakınlaştır / uzaklaştır</span><span><kbd>+</kbd> <kbd>-</kbd></span></div>
+            <div><span>Ekrana sığdır</span><kbd>0</kbd></div>
+            <div><span>Merkezdeki kişiye git</span><kbd>M</kbd></div>
+            <div><span>Kişi ara</span><kbd>/</kbd></div>
+            <div><span>Paneli kapat</span><kbd>Esc</kbd></div>
+          </div>
         </div>
         <div class="modal-bg" hidden><div class="modal" role="dialog" aria-modal="true"><button class="btn icon mx" title="Kapat">${ICON.close}</button><div class="mbody"></div></div></div>
       </div>`;
@@ -477,10 +603,13 @@
     const st = { x: 0, y: 0, k: 1 };
     let graph = null, focusId = null, model = null, sc = null, selected = null, matches = [], matchIdx = -1, anim = 0;
     let horizontal = null; // null: ilk çizimde ekrana göre seçilir
+    let edgesOf = new Map(); // kart id -> ona bağlı çizgiler (üstüne gelince vurgulamak için)
+    const dismissed = new Set(); // kullanıcının kapattığı uyarılar (sekme açık kaldıkça)
 
     function apply() {
       vp.setAttribute('transform', `translate(${st.x},${st.y}) scale(${st.k})`);
       zoomEl.textContent = Math.round(st.k * 100) + '%';
+      svg.classList.toggle('far', st.k < FAR_ZOOM);
     }
     function animateTo(x, y, k) {
       cancelAnimationFrame(anim);
@@ -551,7 +680,9 @@
       model = layout(horizontal);
       sc = scene(model);
       drawSVG(vp, sc);
-      $('.orient').innerHTML = horizontal ? `${ICON.horiz}Yatay` : `${ICON.vert}Dikey`;
+      root.querySelectorAll('.seg [data-o]').forEach((b) => b.classList.toggle('on', (b.dataset.o === 'h') === horizontal));
+      edgesOf = new Map();
+      for (const e of sc.edges) for (const o of [e.e.upper, e.e.lower]) { if (!edgesOf.has(o.id)) edgesOf.set(o.id, []); edgesOf.get(o.id).push(e.el); }
       const s = model.stats;
       $('.subtitle').textContent = [
         `Merkez: ${fullName(model.self) || 'Adı bilinmiyor'}`,
@@ -564,10 +695,14 @@
       if (model.families > 1) notes.push([`Ağaçta birbirine bağlanmayan ${model.families} ayrı aile var. Ortak bir akrabanın listesini eklediğinizde birleşirler.`, null]);
       if (graph.extra.length) notes.push([`${graph.extra.length} satır ağaca yerleştirilemedi.`, showExtra]);
       for (const [text, fn] of notes) {
+        if (dismissed.has(text)) continue;
         const d = document.createElement('div');
         d.className = 'notice';
-        d.innerHTML = esc(text) + (fn ? '<button type="button">Göster</button>' : '');
-        if (fn) d.querySelector('button').onclick = fn;
+        d.innerHTML = `<span>${esc(text)}</span>` + (fn ? '<button type="button" class="go">Göster</button>' : '') +
+          `<button type="button" class="nx" title="Kapat" aria-label="Uyarıyı kapat">${ICON.close}</button>`;
+        if (fn) d.querySelector('.go').onclick = fn;
+        d.querySelector('.nx').onclick = () => { dismissed.add(text); d.remove(); };
+        d.querySelector('.nx svg').setAttribute('width', 14);
         $('.notices').appendChild(d);
       }
       selected = null;
@@ -618,8 +753,9 @@
       const center = fullName(head) || 'merkezdeki kişi';
       const relLine = n.isFocus ? 'Ağaç bu kişiye göre çiziliyor'
         : n.compRoot ? 'Merkezdeki kişiyle bağı bulunamayan ayrı bir aile'
-        : (n.comp ? center + ' ailesinde: ' : center + ' için: ') + (kin && kin !== rel ? kin + ' · ' : '') + rel;
-      let html = `<h2>${esc(name)}</h2><div class="rel">${esc(relLine)}</div>${tags.join('')}`;
+        : (n.comp ? center + ' ailesinde: ' : center + ' için: ') + kinPhrase(n) + (n.rel.length <= 3 && kinPhrase(n) !== rel ? ` (${rel})` : '');
+      const avc = n.kind !== 'real' ? 'inf' : n.gender === 'E' ? 'm' : n.gender === 'K' ? 'f' : '';
+      let html = `<div class="phead"><div class="av ${avc}">${esc(initials(n))}</div><div><h2>${esc(name)}</h2><div class="rel">${esc(relLine)}</div></div></div>${tags.join('')}`;
 
       const acts = [];
       if (!n.isFocus && person.id) acts.push(`<button class="primary" data-act="focus">${ICON.target}Ağacı bu kişiye göre çiz</button>`);
@@ -793,16 +929,84 @@
 
     // ---------- olaylar ----------
     $('.addlist').onclick = () => openAdd(null);
-    $('.lists').onclick = openLists;
+    $('.listsbtn').onclick = openLists;
     $('.panel .x').onclick = () => select(null);
     $('.zin').onclick = () => { const r = stage.getBoundingClientRect(); zoomAt(r.width / 2, r.height / 2, 1.25); };
     $('.zout').onclick = () => { const r = stage.getBoundingClientRect(); zoomAt(r.width / 2, r.height / 2, 0.8); };
     $('.zfit').onclick = () => fit(true);
     $('.ghosts').onchange = () => { if (graph) { build(true); fit(true); } };
-    $('.orient').onclick = () => { if (!graph) return; horizontal = !horizontal; build(true); fit(false); };
-    searchInput.oninput = runSearch;
+    root.querySelectorAll('.seg [data-o]').forEach((b) => (b.onclick = () => {
+      const h = b.dataset.o === 'h';
+      if (!graph || h === horizontal) return;
+      horizontal = h; build(true); fit(false);
+    }));
+
+    // açılır menüler (Görünüm, İndir)
+    function closeMenus(except) {
+      root.querySelectorAll('[data-menu]').forEach((b) => {
+        if (b === except) return;
+        b.setAttribute('aria-expanded', 'false');
+        root.querySelector(`.menu[data-for="${b.dataset.menu}"]`).hidden = true;
+      });
+    }
+    root.querySelectorAll('[data-menu]').forEach((b) => (b.onclick = () => {
+      const m = root.querySelector(`.menu[data-for="${b.dataset.menu}"]`);
+      closeMenus(b);
+      resultsEl.hidden = true;
+      m.hidden = !m.hidden;
+      b.setAttribute('aria-expanded', String(!m.hidden));
+    }));
+    root.addEventListener('pointerdown', (e) => {
+      if (!e.target.closest('.menuwrap')) closeMenus();
+      if (!e.target.closest('.search')) resultsEl.hidden = true;
+      if (!e.target.closest('.zhelp,.helppop')) { helpEl.hidden = true; $('.zhelp').setAttribute('aria-expanded', 'false'); }
+    });
+    root.querySelectorAll('.menu .png,.menu .svg').forEach((b) => b.addEventListener('click', () => closeMenus()));
+
+    const helpEl = $('.helppop');
+    $('.zhelp').onclick = () => { helpEl.hidden = !helpEl.hidden; $('.zhelp').setAttribute('aria-expanded', String(!helpEl.hidden)); };
+    $('.zfocus').onclick = () => { if (model) centerOn(model.self); };
+
+    // arama sonuç listesi
+    const resultsEl = $('.results');
+    function renderResults() {
+      const q = searchInput.value.trim();
+      if (!q || !model) { resultsEl.hidden = true; return; }
+      const seen = new Set();
+      const list = matches.filter((n) => { const k = n.person.id || n.id; if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 12);
+      resultsEl.innerHTML = list.length ? list.map((n, i) => {
+        const kin = n.compRoot ? 'Ayrı aile' : kinPhrase(n);
+        const year = n.kind === 'real' && n.p.birth ? n.p.birth.year : '';
+        const avc = n.kind !== 'real' ? 'inf' : n.gender === 'E' ? 'm' : n.gender === 'K' ? 'f' : '';
+        return `<button data-id="${esc(n.id)}" class="${i === 0 ? 'on' : ''}"><span class="av ${avc}">${esc(initials(n))}</span><span><span class="nm">${esc(fullName(n) || 'Adı bilinmiyor')}</span><small>${esc([kin, year].filter(Boolean).join(' · '))}</small></span></button>`;
+      }).join('') : '<div class="none">Bu adla kimse bulunamadı.</div>';
+      resultsEl.hidden = false;
+      resultsEl.querySelectorAll('[data-id]').forEach((b) => (b.onclick = () => {
+        resultsEl.hidden = true;
+        select(model.byId.get(b.dataset.id), true);
+      }));
+    }
+    searchInput.oninput = () => { closeMenus(); runSearch(); renderResults(); };
+    searchInput.onfocus = () => { if (searchInput.value) renderResults(); };
+
+    // kartın üstüne gelince anne-baba ve çocuk bağlarını vurgula
+    let hovered = null;
+    vp.addEventListener('pointerover', (e) => {
+      const g = e.target.closest && e.target.closest('.node');
+      if (!g || g === hovered) return;
+      root.querySelectorAll('.edge.hl').forEach((x) => x.classList.remove('hl'));
+      hovered = g;
+      (edgesOf.get(g.dataset.id) || []).forEach((x) => x.classList.add('hl'));
+    });
+    vp.addEventListener('pointerout', (e) => {
+      if (hovered && !(e.relatedTarget && hovered.contains(e.relatedTarget))) {
+        root.querySelectorAll('.edge.hl').forEach((x) => x.classList.remove('hl'));
+        hovered = null;
+      }
+    });
     searchInput.onkeydown = (e) => {
       if (e.key === 'Enter' && matches.length) {
+        resultsEl.hidden = true;
         matchIdx = (matchIdx + (e.shiftKey ? -1 : 1) + matches.length) % matches.length;
         countEl.textContent = `${matchIdx + 1}/${matches.length}`;
         select(matches[matchIdx], true);
@@ -879,6 +1083,8 @@
       const typing = t && (t.tagName === 'INPUT' || t.isContentEditable);
       if (e.key === 'Escape') {
         if (!modalBg.hidden) closeModal();
+        else if (!resultsEl.hidden) resultsEl.hidden = true;
+        else if (root.querySelector('.menu:not([hidden])')) closeMenus();
         else if (typing && searchInput.value) { searchInput.value = ''; runSearch(); }
         else if (panel.classList.contains('open')) select(null);
         return;
@@ -888,6 +1094,7 @@
       if (e.key === '+' || e.key === '=') zoomAt(r.width / 2, r.height / 2, 1.25);
       else if (e.key === '-' || e.key === '_') zoomAt(r.width / 2, r.height / 2, 0.8);
       else if (e.key === '0') fit(true);
+      else if ((e.key === 'm' || e.key === 'M') && model) centerOn(model.self);
       else if (e.key === '/' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f')) { e.preventDefault(); searchInput.focus(); }
     });
     window.addEventListener('resize', () => fit(false));
