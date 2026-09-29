@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "e-Devlet Soy Ağacı",
+  "short_name": "Soy Ağacı",
+  "version": "1.1.0",
+  "description": "e-Devlet Alt-Üst Soy Bilgisi listelerini birleştirip görsel bir soy ağacı çizer. Veriler bilgisayarınızdan dışarı çıkmaz.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": ["storage"],
+  "action": {
+    "default_title": "Soy ağacını aç",
+    "default_icon": { "16": "icons/icon16.png", "32": "icons/icon32.png" }
+  },
+  "background": { "service_worker": "src/background.js" },
+  "content_scripts": [
+    {
+      "matches": ["https://*.turkiye.gov.tr/*soy*"],
+      "js": ["src/parse.js", "src/graph.js", "src/store.js", "src/content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
