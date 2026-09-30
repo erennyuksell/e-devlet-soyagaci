@@ -5,9 +5,10 @@ Birden fazla kişinin listesini (anne, baba, amca, teyze...) ekledikçe ortak ki
 
 ## Kurulum
 
-1. Chrome'da `chrome://extensions` adresini açın.
-2. Sağ üstten **Geliştirici modu**nu açın.
-3. **Paketlenmemiş öğe yükle** düğmesine basıp bu klasörü seçin.
+1. [Releases](https://github.com/erennyuksell/e-devlet-soyagaci/releases/latest) sayfasından `e-devlet-soy-agaci-x.y.z.zip` dosyasını indirip bir klasöre çıkarın. Klasörü silmeyin; eklenti oradan çalışır.
+2. Chrome'da `chrome://extensions` adresini açın.
+3. Sağ üstten **Geliştirici modu**nu açın.
+4. **Paketlenmemiş öğe yükle** düğmesine basıp zip'ten çıkan klasörü (içinde `manifest.json` olan) seçin.
 
 ## Kullanım
 
