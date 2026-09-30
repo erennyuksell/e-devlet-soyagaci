@@ -1,0 +1,25 @@
+e-DEVLET SOY AĞACI - KURULUM
+
+Bu eklenti e-Devlet'teki "Alt-Üst Soy Bilgisi Sorgulama" listesini görsel bir soy ağacına çevirir.
+Hiçbir sunucuya veri göndermez; listeler yalnızca senin tarayıcında saklanır.
+
+KURULUM (bir kez yapılır, Chrome, Edge ve Brave'de aynı)
+1. Bu zip dosyasını bir klasöre çıkar. Klasörü silme; eklenti oradan çalışır.
+2. Chrome'da adres çubuğuna  chrome://extensions  yazıp Enter'a bas.
+3. Sağ üstteki "Geliştirici modu" anahtarını aç.
+4. Sol üstte çıkan "Paketlenmemiş öğe yükle" düğmesine bas.
+5. Zip'ten çıkan klasörü seç (içinde manifest.json olan klasör).
+6. Araç çubuğundaki yapboz simgesinden "e-Devlet Soy Ağacı"nı sabitleyebilirsin.
+
+KULLANIM
+1. turkiye.gov.tr'ye giriş yap ve "Alt-Üst Soy Bilgisi Sorgulama" sayfasını aç.
+2. Tablonun üstündeki yeşil şeritte "Soy ağacına ekle" düğmesine bas. Ağaç yeni sekmede açılır.
+3. Annenin, babanın ya da bir akrabanın listesini de eklersen ağaç birleşerek büyür:
+   - Kişi aynı tarayıcıda kendi e-Devlet hesabıyla aynı düğmeye basabilir, ya da
+   - sonuç sayfasını "Farklı kaydet" ile kaydedip sana gönderir, sen "Liste ekle" ile yüklersin.
+4. Bir kişiye tıklayınca ayrıntıları görürsün. "Listeler" menüsünden listeler arasında geçebilir,
+   yedek alabilir ya da silebilirsin.
+
+NOT
+Chrome her açılışta "geliştirici modundaki eklentileri devre dışı bırak" uyarısı gösterebilir;
+"Kapat" ya da uyarıyı yok saymak yeterli, eklenti çalışmaya devam eder.
